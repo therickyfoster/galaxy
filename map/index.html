@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photorealistic Galaxy Map Portal</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: linear-gradient(135deg, #0c0c1d 0%, #1a1a3a 50%, #000000 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle 3s infinite;
+        }
+
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        .container {
+            position: relative;
+            z-index: 2;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 3rem;
+            padding: 2rem 0;
+        }
+
+        .header h1 {
+            font-size: 3.5rem;
+            background: linear-gradient(45deg, #64b5f6, #42a5f5, #1e88e5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 1rem;
+            text-shadow: 0 0 30px rgba(100, 181, 246, 0.3);
+        }
+
+        .subtitle {
+            font-size: 1.2rem;
+            color: #b0bec5;
+            margin-bottom: 2rem;
+        }
+
+        .galaxy-maps {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .map-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .map-card:hover {
+            transform: translateY(-10px);
+            border-color: rgba(100, 181, 246, 0.5);
+            box-shadow: 0 20px 40px rgba(100, 181, 246, 0.2);
+        }
+
+        .map-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #64b5f6, #42a5f5, #1e88e5);
+            border-radius: 20px 20px 0 0;
+        }
+
+        .map-title {
+            font-size: 1.5rem;
+            color: #64b5f6;
+            margin-bottom: 1rem;
+            font-weight: 600;
+        }
+
+        .map-description {
+            color: #e0e0e0;
+            line-height: 1.6;
+            margin-bottom: 1.5rem;
+        }
+
+        .map-features {
+            list-style: none;
+            margin-bottom: 2rem;
+        }
+
+        .map-features li {
+            color: #b0bec5;
+            margin-bottom: 0.5rem;
+            padding-left: 1.5rem;
+            position: relative;
+        }
+
+        .map-features li::before {
+            content: '✦';
+            position: absolute;
+            left: 0;
+            color: #64b5f6;
+        }
+
+        .access-button {
+            display: inline-block;
+            background: linear-gradient(45deg, #1e88e5, #42a5f5);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            margin-right: 1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .access-button:hover {
+            background: linear-gradient(45deg, #1565c0, #1e88e5);
+            transform: scale(1.05);
+            box-shadow: 0 10px 20px rgba(30, 136, 229, 0.3);
+        }
+
+        .secondary-button {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .secondary-button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(100, 181, 246, 0.5);
+        }
+
+        .data-source {
+            font-size: 0.9rem;
+            color: #78909c;
+            margin-top: 1rem;
+            font-style: italic;
+        }
+
+        .featured {
+            grid-column: 1 / -1;
+            background: rgba(100, 181, 246, 0.1);
+            border-color: rgba(100, 181, 246, 0.3);
+        }
+
+        .scientific-accuracy {
+            text-align: center;
+            margin: 3rem 0;
+            padding: 2rem;
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px solid rgba(76, 175, 80, 0.3);
+            border-radius: 15px;
+            max-width: 800px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .scientific-accuracy h3 {
+            color: #81c784;
+            margin-bottom: 1rem;
+        }
+
+        .iframe-container {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .iframe-content {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            padding: 2rem;
+        }
+
+        .close-iframe {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: #f44336;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            cursor: pointer;
+            font-size: 20px;
+            z-index: 1001;
+        }
+
+        .embedded-map {
+            width: 100%;
+            height: calc(100% - 4rem);
+            border: none;
+            border-radius: 10px;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2.5rem;
+            }
+            
+            .galaxy-maps {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="stars" id="stars"></div>
+    
+    <div class="container">
+        <div class="header">
+            <h1>Photorealistic Galaxy Maps</h1>
+            <p class="subtitle">Access the most scientifically accurate and visually stunning maps of our universe, based on real astronomical data from space missions and observatories worldwide.</p>
+        </div>
+
+        <div class="scientific-accuracy">
+            <h3>🌟 100% Real Scientific Data</h3>
+            <p>All maps featured here use actual astronomical observations from space missions including ESA's Gaia satellite, Hubble Space Telescope, and ground-based observatories. These are not artistic interpretations but photorealistic representations of our actual universe.</p>
+        </div>
+
+        <div class="galaxy-maps">
+            <!-- ESA Gaia - Featured -->
+            <div class="map-card featured">
+                <div class="map-title">🛰️ ESA Gaia Galaxy Map</div>
+                <div class="map-description">
+                    The most precise 3D map of our galaxy ever created, featuring 1.8 billion real stars with their actual positions, colors, and brightness. This is the gold standard of galactic cartography.
+                </div>
+                <ul class="map-features">
+                    <li>1.8 billion real stars mapped with micro-arcsecond precision</li>
+                    <li>True stellar colors and brightness from space observations</li>
+                    <li>Interactive zoom from local stars to galactic structure</li>
+                    <li>Data from Europe's billion-euro Gaia space mission</li>
+                </ul>
+                <button class="access-button" onclick="openESAMap()">View ESA Gaia Map</button>
+                <button class="access-button secondary-button" onclick="openGaiaSky()">Gaia Sky (Desktop)</button>
+                <div class="data-source">Data Source: European Space Agency Gaia Mission</div>
+            </div>
+
+            <!-- In-The-Sky 3D Universe -->
+            <div class="map-card">
+                <div class="map-title">🌌 3D Universe Explorer</div>
+                <div class="map-description">
+                    Interactive 3D journey from our Solar System to the edge of the observable universe. Stars are color-coded by temperature using real catalog data.
+                </div>
+                <ul class="map-features">
+                    <li>Real star positions from Hipparcos, Tycho, and Gaia catalogs</li>
+                    <li>3D navigation with smooth zoom and rotation</li>
+                    <li>Color-coded stars by actual temperature</li>
+                    <li>Reveals galactic structure and Local Group</li>
+                </ul>
+                <button class="access-button" onclick="openInTheSky()">Explore 3D Universe</button>
+                <div class="data-source">Data Source: Gaia EDR3, Hipparcos, NGC Catalogs</div>
+            </div>
+
+            <!-- Johns Hopkins Map -->
+            <div class="map-card">
+                <div class="map-title">🔭 Universe Map (Johns Hopkins)</div>
+                <div class="map-description">
+                    Journey from the Milky Way to the cosmic microwave background using 20 years of Sloan Digital Sky Survey data. Shows 200,000 real galaxies.
+                </div>
+                <ul class="map-features">
+                    <li>200,000 galaxies in their true cosmic positions</li>
+                    <li>Journey to the edge of the observable universe</li>
+                    <li>Real redshift effects and cosmic structure</li>
+                    <li>Based on 15 years of continuous observations</li>
+                </ul>
+                <button class="access-button" onclick="openJohnsHopkins()">View Universe Map</button>
+                <div class="data-source">Data Source: Sloan Digital Sky Survey, Planck Mission</div>
+            </div>
+
+            <!-- NASA Hubble Skymap -->
+            <div class="map-card">
+                <div class="map-title">🔍 Hubble Deep Space Map</div>
+                <div class="map-description">
+                    Navigate through Hubble Space Telescope's most spectacular discoveries. Features real nebulae, galaxies, and star clusters with actual telescope imagery.
+                </div>
+                <ul class="map-features">
+                    <li>Real Hubble Space Telescope observations</li>
+                    <li>Messier and Caldwell catalog objects</li>
+                    <li>High-resolution astronomical images</li>
+                    <li>Interactive sky navigation</li>
+                </ul>
+                <button class="access-button" onclick="openHubbleSkymap()">Explore Hubble Map</button>
+                <div class="data-source">Data Source: Hubble Space Telescope, NASA</div>
+            </div>
+
+            <!-- Deep Space Map -->
+            <div class="map-card">
+                <div class="map-title">🌠 Deep Space Interactive Map</div>
+                <div class="map-description">
+                    Google Maps-style interface for deep space exploration. View galaxies, nebulae, and star clusters using real astronomical imagery.
+                </div>
+                <ul class="map-features">
+                    <li>Google Maps interface for space exploration</li>
+                    <li>Real astronomical imagery and data</li>
+                    <li>Seamless zoom from local to cosmic scales</li>
+                    <li>Educational planetarium features</li>
+                </ul>
+                <button class="access-button" onclick="openDeepSpaceMap()">Launch Deep Space Map</button>
+                <div class="data-source">Data Source: Hubble, Various Observatories</div>
+            </div>
+
+            <!-- 3D Galaxy Map App -->
+            <div class="map-card">
+                <div class="map-title">📱 3D Galaxy Explorer</div>
+                <div class="map-description">
+                    Immersive 3D galaxy exploration based on NASA's artistic and scientific models of the Milky Way structure. Available as web app and mobile download.
+                </div>
+                <ul class="map-features">
+                    <li>NASA-based galactic structure modeling</li>
+                    <li>Virtual reality and 3D exploration</li>
+                    <li>Exoplanets, black holes, and pulsars</li>
+                    <li>Mobile apps available</li>
+                </ul>
+                <button class="access-button" onclick="open3DGalaxyMap()">Launch 3D Explorer</button>
+                <div class="data-source">Data Source: NASA Galactic Models</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Iframe overlay for embedded maps -->
+    <div class="iframe-container" id="iframeContainer">
+        <div class="iframe-content">
+            <button class="close-iframe" onclick="closeIframe()">×</button>
+            <iframe class="embedded-map" id="embeddedMap" src=""></iframe>
+        </div>
+    </div>
+
+    <script>
+        // Create animated starfield
+        function createStars() {
+            const starsContainer = document.getElementById('stars');
+            const numStars = 200;
+            
+            for (let i = 0; i < numStars; i++) {
+                const star = document.createElement('div');
+                star.className = 'star';
+                
+                const size = Math.random() * 3 + 1;
+                star.style.width = size + 'px';
+                star.style.height = size + 'px';
+                star.style.left = Math.random() * 100 + '%';
+                star.style.top = Math.random() * 100 + '%';
+                star.style.animationDelay = Math.random() * 3 + 's';
+                
+                starsContainer.appendChild(star);
+            }
+        }
+
+        // Map access functions
+        function openESAMap() {
+            // Open ESA Gaia interactive map
+            window.open('https://www.esa.int/ESA_Multimedia/Images/2020/12/Interactive_map_of_the_sky_from_Gaia_s_Early_Data_Release_3', '_blank');
+        }
+
+        function openGaiaSky() {
+            // Open Gaia Sky download page
+            window.open('https://gaiasky.space/', '_blank');
+        }
+
+        function openInTheSky() {
+            // Embed the 3D Universe map
+            showIframe('https://in-the-sky.org/ngc3d.php');
+        }
+
+        function openJohnsHopkins() {
+            // Open Johns Hopkins universe map
+            window.open('https://mapoftheuniverse.net/', '_blank');
+        }
+
+        function openHubbleSkymap() {
+            // Open NASA Hubble Skymap
+            window.open('https://science.nasa.gov/mission/hubble/multimedia/online-activities/hubble-skymap/', '_blank');
+        }
+
+        function openDeepSpaceMap() {
+            // Open Deep Space Map
+            window.open('http://deepspacemap.com/', '_blank');
+        }
+
+        function open3DGalaxyMap() {
+            // Open 3D Galaxy Map
+            window.open('http://www.3dgalaxymap.com/', '_blank');
+        }
+
+        function showIframe(url) {
+            const container = document.getElementById('iframeContainer');
+            const iframe = document.getElementById('embeddedMap');
+            iframe.src = url;
+            container.style.display = 'block';
+        }
+
+        function closeIframe() {
+            const container = document.getElementById('iframeContainer');
+            const iframe = document.getElementById('embeddedMap');
+            container.style.display = 'none';
+            iframe.src = '';
+        }
+
+        // Initialize stars on page load
+        window.addEventListener('load', createStars);
+
+        // Add smooth scrolling
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+    </script>
+</body>
+</html>

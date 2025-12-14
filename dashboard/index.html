@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PRA • Galaxy Dashboard</title>
+  <meta name="description" content="Standalone, offline-first galaxy-themed dashboard with animated constellations, collapsible sections, tooltips, avatar selection, gamification layers, modular extensions, and tlk.io chat." />
+  <style>
+    /* ------------------------------
+       RESET + BASE THEME
+    -------------------------------- */
+    :root{
+      --bg:#05060d;           /* deep space */
+      --bg-soft:#0b0f1e;      /* nebula glass */
+      --card:#0e1326;         /* card base */
+      --ink:#e8f0ff;          /* primary text */
+      --ink-dim:#9fb3ff;      /* secondary text */
+      --accent:#7af0ff;       /* cyan glow */
+      --accent-2:#b07cff;     /* violet */
+      --accent-3:#7bffb8;     /* mint */
+      --hot:#ff8bcd;          /* magenta */
+      --gold:#ffd479;         /* gold */
+      --glass:rgba(12,16,36,.6);
+      --glow: 0 0 12px rgba(122,240,255,.35), 0 0 4px rgba(176,124,255,.2);
+      --rounded-xl: 18px; 
+      --rounded-2xl: 26px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial;
+      background: radial-gradient(1200px 1200px at 120% -20%, #13162b 0%, transparent 60%),
+                  radial-gradient(900px 900px at -10% 10%, #0a0e1d 0%, transparent 60%),
+                  var(--bg);
+      color:var(--ink);
+      overflow-x:hidden;
+    }
+    a{color:var(--accent)}
+    /* ------------------------------
+       CANVAS BACKDROP
+    -------------------------------- */
+    #starfield, #constellations{
+      position:fixed; inset:0; z-index:-2; display:block;
+    }
+    #constellations{ z-index:-1; mix-blend-mode:screen; opacity:.75; }
+
+    /* ------------------------------
+       LAYOUT
+    -------------------------------- */
+    .wrap{display:grid; grid-template-columns: 280px 1fr; gap:18px; padding:18px;}
+    .sidebar{
+      position:sticky; top:12px; height:calc(100svh - 24px);
+      background:linear-gradient(180deg, rgba(16,20,48,.55), rgba(10,12,28,.35));
+      border:1px solid rgba(255,255,255,.08);
+      backdrop-filter: blur(10px);
+      box-shadow: var(--glow);
+      border-radius: var(--rounded-2xl);
+      padding:14px;
+    }
+    .brand{display:flex; align-items:center; gap:10px; padding:6px 8px; border-radius:14px; background:rgba(255,255,255,.03);}
+    .brand-logo{width:36px; height:36px; border-radius:50%; background: radial-gradient(60% 60% at 35% 35%, var(--accent) 0%, #1b1e3d 55%); box-shadow:0 0 18px rgba(122,240,255,.4) inset, 0 0 18px rgba(122,240,255,.2);} 
+    .brand h1{font-size:16px; margin:0; letter-spacing:.3px}
+    .nav{margin-top:10px; display:grid; gap:8px}
+    .nav a{display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; text-decoration:none; color:var(--ink); border:1px solid rgba(255,255,255,.06); background:rgba(255,255,255,.02)}
+    .nav a:hover{border-color: rgba(122,240,255,.35); box-shadow:0 0 0 3px rgba(122,240,255,.12)}
+
+    .card{
+      background: linear-gradient(180deg, rgba(15, 18, 40, .65), rgba(11,14,32,.35));
+      border:1px solid rgba(255,255,255,.08);
+      border-radius: var(--rounded-2xl);
+      padding:18px;
+      backdrop-filter: blur(10px);
+      box-shadow: var(--glow);
+    }
+
+    .toolbar{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+    .btn{padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.06); background:rgba(255,255,255,.03); color:var(--ink); cursor:pointer}
+    .btn:hover{border-color: rgba(176,124,255,.35); box-shadow: 0 0 0 3px rgba(176,124,255,.12)}
+    .chip{padding:6px 10px; border:1px dashed rgba(255,255,255,.15); border-radius:999px; color:var(--ink-dim); font-size:12px}
+
+    .main{display:grid; gap:18px}
+
+    /* ------------------------------
+       HEAD PANEL
+    -------------------------------- */
+    .head{
+      display:grid; grid-template-columns: 1fr auto; gap:18px; align-items:center;
+    }
+    .title h2{margin:0; font-size:28px}
+    .subtitle{margin:4px 0 0; color:var(--ink-dim)}
+
+    /* Avatar picker */
+    .avatar-picker{display:flex; align-items:center; gap:12px}
+    .avatar{width:42px; height:42px; border-radius:50%; border:1px solid rgba(255,255,255,.15); background:#0e122a; display:grid; place-items:center; cursor:pointer}
+    .avatar svg{width:28px; height:28px}
+    .avatar.selected{box-shadow:0 0 0 3px rgba(122,240,255,.35)}
+
+    /* ------------------------------
+       COLLAPSIBLE SECTIONS
+    -------------------------------- */
+    details.section{border:1px solid rgba(255,255,255,.08); border-radius:18px; background:rgba(255,255,255,.02); overflow:hidden}
+    details.section > summary{ list-style:none; padding:16px 18px; cursor:pointer; display:flex; align-items:center; justify-content:space-between; background:linear-gradient(180deg, rgba(24,28,60,.55), rgba(12,16,34,.35));}
+    details.section > summary::-webkit-details-marker{display:none}
+    details.section[open] > summary{border-bottom:1px solid rgba(255,255,255,.08)}
+    .section-body{padding:16px}
+    .section-title{display:flex; align-items:center; gap:12px; font-weight:700}
+
+    /* Tooltip */
+    [data-tip]{position:relative}
+    [data-tip]:hover::after{content:attr(data-tip); position:absolute; left:50%; transform:translateX(-50%); bottom:calc(100% + 8px); background:#0d1126; color:var(--ink); padding:8px 10px; border-radius:10px; border:1px solid rgba(122,240,255,.25); white-space:nowrap; font-size:12px; box-shadow:0 10px 30px rgba(0,0,0,.35)}
+
+    /* Grid / columns */
+    .cols{display:grid; gap:14px}
+    .cols.two{grid-template-columns: repeat(2, minmax(0,1fr))}
+    .cols.three{grid-template-columns: repeat(3, minmax(0,1fr))}
+    @media (max-width: 1080px){ .wrap{grid-template-columns:1fr} .sidebar{position:relative; height:auto} .cols.two,.cols.three{grid-template-columns:1fr} }
+
+    /* Badges and counters */
+    .badge{display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border-radius:999px; background:rgba(122,240,255,.12); border:1px solid rgba(122,240,255,.25)}
+
+    /* Chat embed wrapper */
+    .chat-embed{height:520px; border-radius:18px; overflow:hidden; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.02)}
+
+    /* Footer */
+    footer{opacity:.8; font-size:12px; text-align:center; padding:20px 0}
+  </style>
+</head>
+<body>
+  <canvas id="starfield"></canvas>
+  <canvas id="constellations"></canvas>
+
+  <div class="wrap">
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+      <div class="brand" title="Planetary Restoration Archive">
+        <div class="brand-logo" aria-hidden="true"></div>
+        <h1>PRA Galaxy Dashboard</h1>
+      </div>
+
+      <div style="margin-top:12px" class="card">
+        <div class="toolbar">
+          <span class="chip">Offline-first</span>
+          <span class="chip">Modular</span>
+          <span class="chip">Zero-harm</span>
+        </div>
+        <div style="margin-top:10px; font-size:13px; color:var(--ink-dim)">
+          A single-file UI you can drop anywhere. All settings are saved locally. Constellations react to your scrolling — starlight as a progress bar.
+        </div>
+      </div>
+
+      <nav class="nav" style="margin-top:12px">
+        <a href="#mission">🌌 Mission</a>
+        <a href="#gamification">🎮 Gamification Layers</a>
+        <a href="#avatars">🧬 Avatars</a>
+        <a href="#extensions">🧩 Extensions</a>
+        <a href="#illustrations">🖼️ Illustrations</a>
+        <a href="#chat">💬 Chat (tlk.io/pra)</a>
+        <a href="#about">❔ About</a>
+      </nav>
+
+      <div class="card" style="margin-top:12px">
+        <div style="display:flex; align-items:center; justify-content:space-between">
+          <div>
+            <div style="font-weight:700">Your Signal</div>
+            <div class="subtitle">Status pings & streaks</div>
+          </div>
+          <div class="badge" id="streakBadge" title="Daily streak">🔥 <span id="streakVal">0</span></div>
+        </div>
+        <div style="margin-top:10px; display:grid; gap:8px">
+          <button class="btn" id="pingBtn" data-tip="Mark a daily check-in">Check-in Today</button>
+          <button class="btn" id="resetBtn" data-tip="Clear local settings">Reset Local Data</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- MAIN -->
+    <main class="main">
+      <section class="head card">
+        <div class="title">
+          <h2>Galaxy Mission Console</h2>
+          <div class="subtitle">Peace and planetary restoration as the default operating system. Modular. Auditable. Fun.</div>
+        </div>
+        <div class="avatar-picker" id="avatarPicker" aria-label="Choose your avatar" title="Choose your avatar">
+          <!-- Avatars injected by JS -->
+        </div>
+      </section>
+
+      <!-- Mission -->
+      <details class="section" open id="mission">
+        <summary>
+          <div class="section-title">🌌 Mission & Overview</div>
+          <span class="badge">ver. 1.0 • standalone</span>
+        </summary>
+        <div class="section-body">
+          <div class="cols two">
+            <div class="card">
+              <h3>Why this file exists</h3>
+              <p>
+                This single HTML file is a portable mission hub. It includes an animated starfield, collapsible knowledge sections, tooltips, a chat room, and a plug-in system for stacking gamification patterns like quests, virtues, badges, and streaks.
+              </p>
+              <p>
+                Everything (avatar, streaks, settings) is stored locally in your browser. Host it anywhere or open it directly from disk. Add more modules without build tools.
+              </p>
+            </div>
+            <div class="card">
+              <h3>Quick Controls</h3>
+              <div class="toolbar">
+                <button class="btn" data-action="toggleGlow">Toggle Glow</button>
+                <button class="btn" data-action="nebulaShift">Nebula Shift</button>
+                <button class="btn" data-action="spawnShootingStar" data-tip="Reward moment: adds a shooting star">Shooting Star</button>
+              </div>
+              <p class="subtitle">Pro-tip: scroll to morph the constellations. They pulse stronger as you open sections — momentum made visible.</p>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <!-- Gamification Layers -->
+      <details class="section" id="gamification">
+        <summary>
+          <div class="section-title">🎮 Multi‑Gamification Layers</div>
+          <span class="badge">extensible</span>
+        </summary>
+        <div class="section-body">
+          <div class="cols three">
+            <div class="card">
+              <h3>Core Layers</h3>
+              <ul>
+                <li>Quests & Checklists</li>
+                <li>Daily Streaks & Rituals</li>
+                <li>Virtues & Vices Dial (balance)</li>
+                <li>Badges & Titles</li>
+                <li>Tokenless Points or Connect a Wallet later</li>
+              </ul>
+            </div>
+            <div class="card">
+              <h3>Example Modules (built-in)</h3>
+              <ul id="moduleList"></ul>
+            </div>
+            <div class="card">
+              <h3>Add Module (JSON)</h3>
+              <textarea id="moduleJSON" style="width:100%; height:160px; background:#0b0f1e; color:var(--ink); border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:10px" placeholder='{"id":"hello","name":"Hello Module","init":"ui => ui.toast(\"Hello, galaxy\")"}'></textarea>
+              <div class="toolbar" style="margin-top:8px">
+                <button class="btn" id="addModuleBtn">Register Module</button>
+                <span class="subtitle">Tip: <code>init</code> can be a function string. Safe‑eval sandboxed.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <!-- Avatars -->
+      <details class="section" id="avatars">
+        <summary>
+          <div class="section-title">🧬 Avatar Selection</div>
+          <span class="badge">local-only</span>
+        </summary>
+        <div class="section-body">
+          <div class="card">
+            <p>Pick a sigil. Your avatar is stored locally. You can extend the set by registering a module that adds more SVGs.</p>
+          </div>
+          <div class="card" id="avatarGallery" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(120px,1fr)); gap:12px"></div>
+        </div>
+      </details>
+
+      <!-- Illustrations -->
+      <details class="section" id="illustrations">
+        <summary>
+          <div class="section-title">🖼️ Generative Illustrations</div>
+          <span class="badge">inline SVG</span>
+        </summary>
+        <div class="section-body">
+          <div class="cols two">
+            <div class="card">
+              <h3>Nebula Rings</h3>
+              <svg viewBox="0 0 300 180" width="100%" height="180" aria-label="Nebula rings illustration">
+                <defs>
+                  <radialGradient id="g1" cx="50%" cy="50%">
+                    <stop offset="0%" stop-color="#7af0ff" stop-opacity=".9"/>
+                    <stop offset="60%" stop-color="#b07cff" stop-opacity=".35"/>
+                    <stop offset="100%" stop-color="#0a0e1d" stop-opacity="0"/>
+                  </radialGradient>
+                </defs>
+                <rect width="300" height="180" fill="#0a0e1d"/>
+                <circle cx="90" cy="90" r="80" fill="url(#g1)"/>
+                <circle cx="210" cy="90" r="70" fill="url(#g1)"/>
+                <circle cx="150" cy="90" r="40" fill="url(#g1)"/>
+              </svg>
+            </div>
+            <div class="card">
+              <h3>Constellation Path</h3>
+              <svg id="constellationSvg" viewBox="0 0 300 180" width="100%" height="180">
+                <rect width="300" height="180" fill="#0a0e1d"/>
+                <g stroke="#7af0ff" stroke-width="1.5" opacity=".8">
+                  <circle cx="30" cy="150" r="2"/>
+                  <circle cx="90" cy="120" r="2"/>
+                  <circle cx="150" cy="60" r="2"/>
+                  <circle cx="210" cy="100" r="2"/>
+                  <circle cx="270" cy="40" r="2"/>
+                  <polyline fill="none" points="30,150 90,120 150,60 210,100 270,40"/>
+                </g>
+              </svg>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <!-- Extensions -->
+      <details class="section" id="extensions">
+        <summary>
+          <div class="section-title">🧩 Extensions Registry</div>
+          <span class="badge" id="extCount">0 installed</span>
+        </summary>
+        <div class="section-body">
+          <div class="card">
+            <h3>How it works</h3>
+            <p>
+              Modules register via <code>window.PRA.registerModule({ id, name, init })</code>. The <code>init(ui)</code> receives utilities for toasts, storage, and creating panels.
+              Paste JSON above to add modules on the fly. Your modules persist locally.
+            </p>
+          </div>
+          <div class="cols two" id="extPanels"></div>
+        </div>
+      </details>
+
+      <!-- Chat -->
+      <details class="section" id="chat" open>
+        <summary>
+          <div class="section-title">💬 tlk.io /pra</div>
+          <span class="badge">live</span>
+        </summary>
+        <div class="section-body">
+          <div class="chat-embed">
+            <div id="tlkio" data-channel="pra" style="width:100%; height:100%"></div>
+            <script async src="https://tlk.io/client.js"></script>
+          </div>
+        </div>
+      </details>
+
+      <!-- About -->
+      <details class="section" id="about">
+        <summary>
+          <div class="section-title">❔ About & License</div>
+          <span class="badge">MIT</span>
+        </summary>
+        <div class="section-body">
+          <div class="card">
+            <p>
+              Built as a single, portable HTML document. No build step, no dependencies. Feel free to fork this file and adapt. Values: zero‑harm, transparency, sovereignty, verifiability.
+            </p>
+            <p class="subtitle">Save a copy; it runs offline. A tiny service worker is included for cache‑first loading.</p>
+          </div>
+        </div>
+      </details>
+
+      <footer>
+        © <span id="year"></span> PRA Galaxy Dashboard • Made with starlight and careful code.
+      </footer>
+    </main>
+  </div>
+
+  <script>
+  /* ==========================================================
+     STARFIELD + CONSTELLATIONS (Scroll‑reactive)
+  ========================================================== */
+  const starCanvas = document.getElementById('starfield');
+  const constCanvas = document.getElementById('constellations');
+  const sctx = starCanvas.getContext('2d');
+  const cctx = constCanvas.getContext('2d');
+  let W, H, stars = [], lines = [], shoot = [];
+
+  function resize(){
+    W = starCanvas.width = constCanvas.width = innerWidth;
+    H = starCanvas.height = constCanvas.height = innerHeight;
+  }
+  addEventListener('resize', resize); resize();
+
+  function initStars(n=280){
+    stars = Array.from({length:n}, ()=>({
+      x: Math.random()*W,
+      y: Math.random()*H,
+      z: Math.random()*1 + .2,
+      r: Math.random()*1.2 + .2,
+      tw: Math.random()*0.8 + 0.2
+    }));
+  }
+  function initConstellations(){
+    const count = 7; lines = [];
+    for(let i=0;i<count;i++){
+      const path = [];
+      const points = 3 + Math.floor(Math.random()*5);
+      for(let p=0;p<points;p++) path.push([Math.random()*W, Math.random()*H]);
+      lines.push(path);
+    }
+  }
+  initStars(); initConstellations();
+
+  let scrollFactor = 0;
+  addEventListener('scroll', ()=>{
+    const max = Math.max(1, document.body.scrollHeight - innerHeight);
+    scrollFactor = (scrollY / max);  // 0..1
+  }, {passive:true});
+
+  function drawStars(t){
+    sctx.clearRect(0,0,W,H);
+    for(const s of stars){
+      const twinkle = 0.6 + 0.4*Math.sin(t*0.003 * s.tw + s.x*0.01);
+      sctx.globalAlpha = 0.6*twinkle;
+      sctx.fillStyle = '#e8f0ff';
+      sctx.beginPath(); sctx.arc(s.x, s.y, s.r*twinkle, 0, Math.PI*2); sctx.fill();
+    }
+    // shooting stars
+    for(let i=shoot.length-1;i>=0;i--){
+      const s = shoot[i]; s.x += s.vx; s.y += s.vy; s.life -= 1;
+      sctx.globalAlpha = Math.max(0, s.life/60);
+      sctx.strokeStyle = '#7af0ff'; sctx.lineWidth = 1;
+      sctx.beginPath(); sctx.moveTo(s.x, s.y); sctx.lineTo(s.x - s.vx*8, s.y - s.vy*8); sctx.stroke();
+      if(s.life<=0) shoot.splice(i,1);
+    }
+  }
+  function drawConstellations(t){
+    cctx.clearRect(0,0,W,H);
+    cctx.strokeStyle = 'rgba(122,240,255,.65)';
+    cctx.lineWidth = 1.2 + scrollFactor*2.0;
+    cctx.shadowBlur = 8 + scrollFactor*18; cctx.shadowColor = 'rgba(122,240,255,.6)';
+    for(const path of lines){
+      cctx.beginPath();
+      path.forEach(([x,y],i)=>{
+        const ox = x + Math.sin((t*0.0008)+(i*2.1))*12*scrollFactor;
+        const oy = y + Math.cos((t*0.0006)+(i*1.7))*12*scrollFactor;
+        if(i===0) cctx.moveTo(ox,oy); else cctx.lineTo(ox,oy);
+        // star node
+        cctx.moveTo(ox,oy); cctx.arc(ox,oy, 1.6 + scrollFactor*2, 0, Math.PI*2);
+      });
+      cctx.stroke();
+    }
+  }
+  function loop(t){ drawStars(t); drawConstellations(t); requestAnimationFrame(loop); }
+  requestAnimationFrame(loop);
+
+  function spawnShootingStar(){
+    shoot.push({x: Math.random()*W, y: Math.random()*H*0.5, vx: -6 - Math.random()*4, vy: 1 + Math.random()*2, life: 60});
+  }
+
+  /* ==========================================================
+     UI UTILITIES + STORAGE
+  ========================================================== */
+  const $ = (sel, el=document) => el.querySelector(sel);
+  const $$ = (sel, el=document) => Array.from(el.querySelectorAll(sel));
+  const store = {
+    get:(k, d)=>{ try{return JSON.parse(localStorage.getItem(k)) ?? d}catch{ return d } },
+    set:(k, v)=> localStorage.setItem(k, JSON.stringify(v)),
+    del:(k)=> localStorage.removeItem(k)
+  };
+  const ui = {
+    toast(msg){
+      const n = document.createElement('div');
+      n.textContent = msg; n.style.position='fixed'; n.style.left='50%'; n.style.bottom='24px'; n.style.transform='translateX(-50%)';
+      n.style.padding='10px 14px'; n.style.background='rgba(12,16,36,.85)'; n.style.border='1px solid rgba(122,240,255,.35)'; n.style.borderRadius='12px'; n.style.boxShadow='0 10px 30px rgba(0,0,0,.35)'; n.style.zIndex='9999';
+      document.body.appendChild(n); setTimeout(()=>n.remove(), 1800);
+    },
+    panel(title){
+      const wrap = document.createElement('div'); wrap.className='card';
+      const h = document.createElement('h3'); h.textContent = title; wrap.appendChild(h);
+      return {el:wrap, mount: (sel)=> $(sel).appendChild(wrap)};
+    }
+  };
+
+  /* ==========================================================
+     AVATARS
+  ========================================================== */
+  const AVATARS = [
+    // Simple inline SVG sigils
+    `<svg viewBox="0 0 64 64" fill="none" stroke="var(--accent)" stroke-width="2"><circle cx="32" cy="32" r="20"/><path d="M12 32h40M32 12v40"/></svg>`,
+    `<svg viewBox="0 0 64 64" fill="none" stroke="var(--accent-2)" stroke-width="2"><polygon points="32,8 56,24 48,56 16,56 8,24"/></svg>`,
+    `<svg viewBox="0 0 64 64" fill="none" stroke="var(--accent-3)" stroke-width="2"><path d="M32 8c8 8 8 16 0 24s-8 16 0 24"/><path d="M8 32c8-8 16-8 24 0s16 8 24 0"/></svg>`,
+    `<svg viewBox="0 0 64 64" fill="none" stroke="var(--gold)" stroke-width="2"><circle cx="32" cy="32" r="20"/><path d="M22 22l20 20M42 22L22 42"/></svg>`,
+  ];
+
+  function renderAvatars(){
+    const picker = document.getElementById('avatarPicker');
+    const gallery = document.getElementById('avatarGallery');
+    const saved = store.get('avatarIndex', 0);
+    picker.innerHTML = '';
+    gallery.innerHTML = '';
+    AVATARS.forEach((svg, i)=>{
+      const a = document.createElement('button'); a.className='avatar'; a.innerHTML = svg; a.title = 'Choose avatar';
+      if(i===saved) a.classList.add('selected');
+      a.onclick = ()=>{ store.set('avatarIndex', i); renderAvatars(); ui.toast('Avatar updated'); };
+      picker.appendChild(a);
+
+      const g = document.createElement('div'); g.className='card'; g.style.display='grid'; g.style.placeItems='center'; g.innerHTML = `<div class="avatar ${i===saved?'selected':''}" style="width:88px;height:88px">${svg}</div>`;
+      g.onclick = ()=>{ store.set('avatarIndex', i); renderAvatars(); };
+      gallery.appendChild(g);
+    });
+  }
+  renderAvatars();
+
+  /* ==========================================================
+     STREAKS (Daily check‑in)
+  ========================================================== */
+  function todayKey(){ const d=new Date(); return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}` }
+  function getStreak(){ return store.get('streak', {count:0, last:''}) }
+  function setStreak(s){ store.set('streak', s); $('#streakVal').textContent = s.count }
+  function checkIn(){
+    const s = getStreak(); const key = todayKey();
+    if(s.last === key) { ui.toast('Already checked in today'); return }
+    // If last was yesterday, increment; else reset to 1
+    const y = new Date(); y.setDate(y.getDate()-1); const ykey = `${y.getFullYear()}-${y.getMonth()+1}-${y.getDate()}`;
+    s.count = (s.last===ykey)? (s.count+1) : 1; s.last = key; setStreak(s); ui.toast('Check‑in recorded'); spawnShootingStar();
+  }
+  function resetAll(){ localStorage.clear(); ui.toast('Local data cleared'); setTimeout(()=>location.reload(), 300) }
+  setStreak(getStreak());
+  $('#pingBtn').onclick = checkIn; $('#resetBtn').onclick = resetAll;
+
+  /* ==========================================================
+     ACTION BUTTONS
+  ========================================================== */
+  document.body.addEventListener('click', (e)=>{
+    const act = e.target.getAttribute('data-action');
+    if(!act) return;
+    if(act==='toggleGlow'){
+      document.documentElement.style.setProperty('--glow', '0 0 0 rgba(0,0,0,0)');
+      ui.toast('Glow toggled');
+    }
+    if(act==='nebulaShift'){
+      document.body.style.background = `radial-gradient(1000px 1000px at ${Math.random()*100}% ${Math.random()*50}%, #161a36 0%, transparent 60%), radial-gradient(900px 900px at ${Math.random()*100}% ${Math.random()*50}%, #0a0e1d 0%, transparent 60%), var(--bg)`;
+      ui.toast('Nebula shifted');
+    }
+    if(act==='spawnShootingStar'){ spawnShootingStar(); ui.toast('✨ Wish noted'); }
+  });
+
+  /* ==========================================================
+     EXTENSION SYSTEM
+  ========================================================== */
+  window.PRA = (function(){
+    const modules = store.get('modules', []);
+    function persist(){ store.set('modules', modules) }
+    function list(){ return modules.map(m=>({id:m.id, name:m.name})) }
+    function registerModule({id, name, init}){
+      if(!id||!name||!init) throw new Error('Module requires id, name, init');
+      if(modules.find(m=>m.id===id)) throw new Error('Module id exists');
+      const mod = {id, name, init: String(init)}; modules.push(mod); persist();
+      mountModule(mod); refreshModuleList(); ui.toast(`Module "+${name}+" added`);
+    }
+    function safeInit(code){
+      // Minimal sandbox: function gets (ui, store, panels)
+      const fn = new Function('ui','store','panels',`return (${code})`);
+      return fn(ui, store, panelsAPI());
+    }
+    function panelsAPI(){ return {
+      create(title){ const p = ui.panel(title); p.mount('#extPanels'); return p.el },
+    } }
+    function mountModule(mod){
+      try{ const init = safeInit(mod.init); if(typeof init==='function'){ init({toast:ui.toast, panel:ui.panel, panels: panelsAPI(), storage:store}); } }
+      catch(err){ console.error(err); ui.toast('Module init failed'); }
+    }
+    function mountAll(){ modules.forEach(mountModule); refreshModuleList(); }
+    function refreshModuleList(){
+      $('#moduleList').innerHTML = modules.map(m=>`<li>${m.name} <span class="subtitle">#${m.id}</span></li>`).join('');
+      $('#extCount').textContent = `${modules.length} installed`;
+    }
+    return { registerModule, list, mountAll };
+  })();
+
+  // Built‑in example modules
+  const builtIns = [
+    { id:'streak-reward', name:'Streak Reward', init: (ui,store)=>(){
+      const p = ui.panel('Streak Reward'); const b=document.createElement('button'); b.textContent='Grant Bonus Star'; b.className='btn'; b.onclick=()=>{spawnShootingStar(); ui.toast('Bonus star granted')}; p.mount('#extPanels'); }
+    },
+    { id:'quest-notes', name:'Quest Notes', init: (ui,store)=>(){
+      const p = ui.panel('Quest Notes'); const t=document.createElement('textarea'); t.placeholder='Write a quest...'; t.style.cssText='width:100%;height:120px;background:#0b0f1e;color:var(--ink);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:10px';
+      const sKey='quest-notes'; t.value = store.get(sKey,''); t.addEventListener('input',()=>store.set(sKey,t.value)); p.mount('#extPanels').appendChild(t);
+    }},
+    { id:'virtue-dial', name:'Virtue Dial', init: (ui,store)=>(){
+      const p = ui.panel('Virtue Dial'); const w=document.createElement('input'); w.type='range'; w.min='-10'; w.max='10'; w.value= store.get('virtue',0); w.oninput=()=>{store.set('virtue', w.value);}; p.mount('#extPanels').appendChild(w);
+    }},
+  ];
+  // Mount built-ins only once
+  if(!store.get('builtinsLoaded', false)){
+    builtIns.forEach(m=>{
+      try{ PRA.registerModule({id:m.id, name:m.name, init:m.init}); }catch(e){ console.warn(e) }
+    });
+    store.set('builtinsLoaded', true);
+  }
+  PRA.mountAll();
+
+  // Add module via JSON editor
+  document.getElementById('addModuleBtn').onclick = ()=>{
+    try{
+      const raw = document.getElementById('moduleJSON').value.trim(); if(!raw){ ui.toast('Paste a module JSON'); return }
+      const obj = JSON.parse(raw);
+      PRA.registerModule(obj);
+      document.getElementById('moduleJSON').value='';
+    }catch(e){ ui.toast('Invalid JSON or duplicate id'); }
+  };
+
+  /* ==========================================================
+     SIMPLE SERVICE WORKER (inline via blob)
+  ========================================================== */
+  if('serviceWorker' in navigator){
+    const sw = `self.addEventListener('install', e=>{ e.waitUntil(caches.open('pra-cache-v1').then(c=>c.addAll(['./'])) )});
+      self.addEventListener('fetch', e=>{ e.respondWith(caches.match(e.request).then(r=>r || fetch(e.request))) });`;
+    const blob = new Blob([sw], {type:'text/javascript'}); const url = URL.createObjectURL(blob);
+    navigator.serviceWorker.register(url).catch(()=>{});
+  }
+
+  /* Misc */
+  document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
